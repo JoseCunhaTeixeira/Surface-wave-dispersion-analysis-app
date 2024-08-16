@@ -411,7 +411,7 @@ def lorentzian_error(v_picked, f_picked, dx, Nx, a):
 
 
 ### -----------------------------------------------------------------------------------------------
-def invert_evodcinv(fs : np.array, vs: np.array, dcs : np.array, layers : dict):
+def invert_evodcinv(fs : np.array, vs: np.array, dcs : np.array, layers : dict, runs : int):
     # Initialize model
     model = EarthModel()
     
@@ -443,7 +443,7 @@ def invert_evodcinv(fs : np.array, vs: np.array, dcs : np.array, layers : dict):
     curves = [Curve(fs, vs, 0, "rayleigh", "phase")]
 
     # Run inversion
-    res = model.invert(curves)
+    res = model.invert(curves, runs)
 
     return res.model, res.misfit
 ### -----------------------------------------------------------------------------------------------

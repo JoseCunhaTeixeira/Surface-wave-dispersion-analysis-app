@@ -239,7 +239,8 @@ if uploaded_file is not None:
                 thickness_max = st.number_input("Max thickness [m]", value=5.0)
                 vs_min = st.number_input("Min S-wave velocity [m/s]", value=100.0)
                 vs_max = st.number_input("Max S-wave velocity [m/s]", value=2000.0)
-                
+                runs = st.number_input("Number of runs", value=1)
+
                 button_add = st.button("Add layer")
                 if button_add:
                     clicked_add_layer(thickness_min, thickness_max, vs_min, vs_max)
@@ -256,7 +257,7 @@ if uploaded_file is not None:
             
                 button_invert = st.button("Invert")
                 if button_invert:
-                    model, misfit = invert_evodcinv(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, st.session_state.layers)
+                    model, misfit = invert_evodcinv(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, st.session_state.layers, runs)
                     fig = plot_inversion(model)
                     st.plotly_chart(fig)
                     df = pd.DataFrame(model*1000, columns=["Thickness [m]", "P-wave velocity [m/s]", "S-wave velocity [m/s]", "Density [kg/m^3]"])

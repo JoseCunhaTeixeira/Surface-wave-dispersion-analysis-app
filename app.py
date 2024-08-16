@@ -9,7 +9,7 @@ streamlit run app.py --server.enableXsrfProtection false
 """
 
 import sys
-import time
+# import time
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -195,20 +195,20 @@ if uploaded_file is not None:
 
     if function in ["Phase-Shift (C++)", "Phase-Shift (Python)"]:
         if function == "Phase-Shift (C++)":
-            tic = time.time()
+            # tic = time.time()
             (fs, vs, FV) = phase_shift_cpp(XT, dt, offsets, f_min, f_max, v_min, v_max, dv)
-            tac = time.time()
+            # # tac = time.time()
             FV = np.array(FV)
             fs = np.array(fs)
             vs = np.array(vs)
         elif function == "Phase-Shift (Python)":
-            tic = time.time()
+            # # tic = time.time()
             (fs, vs, FV) = phase_shift_py(XT, dt, offsets, f_min, f_max, v_min, v_max, dv)
-            tac = time.time()
+            # # tac = time.time()
         
         
         if not st.session_state.clicked_pick:
-            st.text(f"Elapsed time:  {tac - tic:4f} s")
+            # st.text(f"Elapsed time:  {tac - tic:4f} s")
             fig = plot_FV(FV, fs, vs, norm=norm)
             
             if st.session_state.picked:
@@ -321,17 +321,17 @@ if uploaded_file is not None:
                 
     elif function in ["FK (C++)", "FK (Python)"]:
         if function == "FK (C++)":
-            tic = time.time()
+            # tic = time.time()
             (fs, ks, FK) = FK_cpp(XT, dt, offsets, f_min, f_max, k_min, k_max)
             FK = np.array(FK)
             fs = np.array(fs)
             ks = np.array(ks)
-            tac = time.time()
+            # # tac = time.time()
         elif function == "FK (Python)":
-            tic = time.time()
+            # # tic = time.time()
             (fs, ks, FK) = FK_py(XT, dt, offsets, f_min, f_max, k_min, k_max)
-            tac = time.time()
-        st.text(f"Elapsed time:  {tac - tic:4f} s")
+            # # tac = time.time()
+        # st.text(f"Elapsed time:  {tac - tic:4f} s")
         fig = plot_FK(FK, fs, ks, norm=norm)
         st.plotly_chart(fig)
         

@@ -1,4 +1,3 @@
-time
 numpy
 streamlit
 obspy

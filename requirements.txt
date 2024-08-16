@@ -6,3 +6,5 @@ matplotlib
 scipy
 disba
 h5py
+stochopy
+disba

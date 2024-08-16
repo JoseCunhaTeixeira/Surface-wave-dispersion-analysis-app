@@ -1,7 +1,4 @@
 """
-Compile C++ functions:
-python3.10 setup.py build_ext --inplace clean
-
 Launch the app with the following command:
 streamlit run app.py
 or

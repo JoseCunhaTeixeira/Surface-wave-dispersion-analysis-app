@@ -161,7 +161,7 @@ if uploaded_file is not None:
                             ["Phase-Shift", "FK"],
                             )
         
-    if function == ["Phase-Shift"]:
+    if function == "Phase-Shift":
         f_min = st.number_input("Min frequency [Hz]", value=0.0)
         f_max = st.number_input("Max frequency [Hz]", value=200.0)
         v_min = st.number_input("Min velocity [m/s]", value=0.0)
@@ -176,7 +176,7 @@ if uploaded_file is not None:
         dv = dv
         norm = norm
         
-    elif function == ["FK"]:
+    elif function == "FK":
         f_min = st.number_input("Min frequency [Hz]", 0.0)
         f_max = st.number_input("Max frequency [Hz]", value=200.0)
         k_min = st.number_input("Min wavenumber [m^-1]", value=0.0)
@@ -185,7 +185,7 @@ if uploaded_file is not None:
         
 
 
-    if function == ["Phase-Shift"]:
+    if function == "Phase-Shift":
         (fs, vs, FV) = phase_shift_py(XT, dt, offsets, f_min, f_max, v_min, v_max, dv)
         
         

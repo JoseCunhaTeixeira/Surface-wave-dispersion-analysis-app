@@ -1,0 +1,14 @@
+os
+subprocess
+distutils
+Cython
+sys
+time
+numpy
+streamlit
+obspy
+plotly
+matplotlib
+scipy
+evodcinv
+disba

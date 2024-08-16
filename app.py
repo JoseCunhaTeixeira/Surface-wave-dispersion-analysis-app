@@ -263,7 +263,6 @@ if uploaded_file is not None:
                     df = pd.DataFrame(model*1000, columns=["Thickness [m]", "P-wave velocity [m/s]", "S-wave velocity [m/s]", "Density [kg/m^3]"])
                     st.dataframe(df)
                     st.success("Success: Inversion completed.")
-                    st.info(f"Info: Misfit = {misfit:.2f}")
                     
                     fs_inverted, vs_inverted = direct(model, st.session_state.fs_picked)
                     

@@ -292,7 +292,7 @@ if uploaded_file is not None:
             
                 
 
-        if function == "FK":
+    elif function == "FK":
             (fs, ks, FK) = FK_py(XT, dt, offsets, f_min, f_max, k_min, k_max)
         fig = plot_FK(FK, fs, ks, norm=norm)
         st.plotly_chart(fig)

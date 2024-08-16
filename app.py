@@ -5,7 +5,6 @@ or
 streamlit run app.py --server.enableXsrfProtection false
 """
 
-import sys
 import numpy as np
 import pandas as pd
 import streamlit as st

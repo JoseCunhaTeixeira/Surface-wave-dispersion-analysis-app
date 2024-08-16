@@ -540,9 +540,9 @@ def plot_dispersion_curves(fs, vs, dc, fs_inv, vs_inv):
         y=vs,
         mode='markers',
         name='Measured',
-        marker=dict(symbol='circle', size=5, color='blue'),
+        marker=dict(symbol='circle', size=5, color='cornflowerblue'),
         showlegend=True,
-        error_y=dict(type='data', array=dc, visible=True, color='blue', width=2, thickness=0.75),
+        error_y=dict(type='data', array=dc, visible=True, color='cornflowerblue', width=2, thickness=0.75),
         )
     )
 

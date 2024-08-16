@@ -1,3 +1,13 @@
+"""
+Compile C++ functions:
+python3.10 setup.py build_ext --inplace clean
+
+Launch the app with the following command:
+streamlit run app.py
+or
+streamlit run app.py --server.enableXsrfProtection false
+"""
+
 import sys
 import time
 import numpy as np

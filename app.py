@@ -9,25 +9,17 @@ streamlit run app.py --server.enableXsrfProtection false
 """
 
 import sys
-# import time
 import numpy as np
 import pandas as pd
 import streamlit as st
 from obspy import read
 
-
-sys.path.append("./lib")
-from dispersion import phase_shift as phase_shift_cpp
-from dispersion import FK as FK_cpp
-sys.path.append("./src")
 from functions import phase_shift as phase_shift_py
 from functions import FK as FK_py
 from functions import stream_to_array, plot_wiggle, plot_spectrum, plot_FV, plot_FK, plot_geophones, extract_curve, lorentzian_error, invert_evodcinv, plot_inversion, direct, plot_dispersion_curves
 
 import warnings
 warnings.filterwarnings("ignore")
-
-
 
 import plotly.graph_objects as go
 import plotly.express as px
@@ -166,10 +158,10 @@ if uploaded_file is not None:
     st.divider()
     st.header("Dispersion extraction")
     function = st.selectbox("Dispersion computing function",
-                            ["Phase-Shift (C++)", "Phase-Shift (Python)", "FK (C++)", "FK (Python)"],
+                            ["Phase-Shift", "FK"],
                             )
         
-    if function in ["Phase-Shift (C++)", "Phase-Shift (Python)"]:
+    if function == ["Phase-Shift"]:
         f_min = st.number_input("Min frequency [Hz]", value=0.0)
         f_max = st.number_input("Max frequency [Hz]", value=200.0)
         v_min = st.number_input("Min velocity [m/s]", value=0.0)
@@ -184,7 +176,7 @@ if uploaded_file is not None:
         dv = dv
         norm = norm
         
-    elif function in ["FK (C++)", "FK (Python)"]:
+    elif function == ["FK"]:
         f_min = st.number_input("Min frequency [Hz]", 0.0)
         f_max = st.number_input("Max frequency [Hz]", value=200.0)
         k_min = st.number_input("Min wavenumber [m^-1]", value=0.0)
@@ -193,22 +185,11 @@ if uploaded_file is not None:
         
 
 
-    if function in ["Phase-Shift (C++)", "Phase-Shift (Python)"]:
-        if function == "Phase-Shift (C++)":
-            # tic = time.time()
-            (fs, vs, FV) = phase_shift_cpp(XT, dt, offsets, f_min, f_max, v_min, v_max, dv)
-            # # tac = time.time()
-            FV = np.array(FV)
-            fs = np.array(fs)
-            vs = np.array(vs)
-        elif function == "Phase-Shift (Python)":
-            # # tic = time.time()
-            (fs, vs, FV) = phase_shift_py(XT, dt, offsets, f_min, f_max, v_min, v_max, dv)
-            # # tac = time.time()
+    if function == ["Phase-Shift"]:
+        (fs, vs, FV) = phase_shift_py(XT, dt, offsets, f_min, f_max, v_min, v_max, dv)
         
         
         if not st.session_state.clicked_pick:
-            # st.text(f"Elapsed time:  {tac - tic:4f} s")
             fig = plot_FV(FV, fs, vs, norm=norm)
             
             if st.session_state.picked:
@@ -307,31 +288,12 @@ if uploaded_file is not None:
                 st.warning("Warning: Please add at least one layer to perform the inversion.")
                     
             st.divider()
-
-
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
+            
+            
                 
-    elif function in ["FK (C++)", "FK (Python)"]:
-        if function == "FK (C++)":
-            # tic = time.time()
-            (fs, ks, FK) = FK_cpp(XT, dt, offsets, f_min, f_max, k_min, k_max)
-            FK = np.array(FK)
-            fs = np.array(fs)
-            ks = np.array(ks)
-            # # tac = time.time()
-        elif function == "FK (Python)":
-            # # tic = time.time()
+
+        if function == "FK":
             (fs, ks, FK) = FK_py(XT, dt, offsets, f_min, f_max, k_min, k_max)
-            # # tac = time.time()
-        # st.text(f"Elapsed time:  {tac - tic:4f} s")
         fig = plot_FK(FK, fs, ks, norm=norm)
         st.plotly_chart(fig)
         

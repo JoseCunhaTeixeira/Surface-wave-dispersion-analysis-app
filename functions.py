@@ -5,7 +5,7 @@ from matplotlib.path import Path
 from scipy.fft import fft, fftfreq, fft2
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
-from evodcinv import EarthModel, Layer, Curve
+from evodcinv_modified import EarthModel, Layer, Curve
 from plotly.subplots import make_subplots
 from disba import PhaseDispersion
 

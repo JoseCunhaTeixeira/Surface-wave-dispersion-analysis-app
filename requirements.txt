@@ -4,5 +4,4 @@ obspy
 plotly
 matplotlib
 scipy
-evodcinv
 disba

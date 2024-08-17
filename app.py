@@ -357,7 +357,7 @@ if uploaded_file is not None:
                                 
                 event = st.plotly_chart(fig, selection_mode=["lasso"], on_select=handle_picked, key='event')
                 
-                st.info("⬆️ Use the lasso to draw a zone on the dispersion diagram where to pick the curve.")
+                st.info("📿 Use the lasso to draw a zone on the dispersion diagram where to pick the curve.")
                 st.info("👇 Or click on the button 'Cancel picking' to cancel the picking.")
                 st.button("Cancel picking")
                 

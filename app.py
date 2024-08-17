@@ -10,8 +10,8 @@ import pandas as pd
 import streamlit as st
 from obspy import read
 
-from functions import phase_shift as phase_shift_py
-from functions import FK as FK_py
+from functions import phase_shift
+from functions import FK
 from functions import stream_to_array, plot_wiggle, plot_spectrum, plot_disp, plot_geophones, extract_curve, lorentzian_error, invert_evodcinv, plot_inversion, direct, plot_dispersion_curves
 
 import warnings
@@ -293,7 +293,7 @@ if uploaded_file is not None:
                 
             if function == "Phase-Shift":
                 if 'FV' not in st.session_state:
-                    (fs, vs, FV) = phase_shift_py(XT, dt, offsets, f_min, f_max, v_min, v_max, dv)
+                    (fs, vs, FV) = phase_shift(XT, dt, offsets, f_min, f_max, v_min, v_max, dv)
                     st.session_state.fs = fs
                     st.session_state.vs = vs
                     st.session_state.FV = FV
@@ -306,7 +306,7 @@ if uploaded_file is not None:
                 
             elif function == "FK":
                 if 'FV' not in st.session_state:
-                    (fs, vs, FV) = FK_py(XT, dt, offsets, f_min, f_max, k_min, k_max)
+                    (fs, vs, FV) = FK(XT, dt, offsets, f_min, f_max, k_min, k_max)
                     st.session_state.fs = fs
                     st.session_state.vs = vs
                     st.session_state.FV = FV

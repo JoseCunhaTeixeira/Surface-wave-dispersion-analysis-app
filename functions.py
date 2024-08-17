@@ -5,7 +5,7 @@ from matplotlib.path import Path
 from scipy.fft import fft, fftfreq, fft2
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
-from evodcinv_modified import EarthModel, Layer, Curve
+from evodcinv import EarthModel, Layer, Curve
 from plotly.subplots import make_subplots
 from disba import PhaseDispersion
 
@@ -204,6 +204,15 @@ def plot_spectrum(XT, positions, dt, norm='trace'):
 
 
 
+def plot_disp(arr, xs, ys, type, norm=None):
+    if type == "FV":
+        fig = plot_FV(arr, xs, ys, norm)
+    elif type == "FK":
+        fig = plot_FK(arr, xs, ys, norm)
+    return fig
+
+
+
 ### -----------------------------------------------------------------------------------------------
 def plot_FV(FV, fs, vs, norm=None):
     if norm == "Frequency":
@@ -217,7 +226,7 @@ def plot_FV(FV, fs, vs, norm=None):
                     x=fs,
                     y=vs,
                     aspect='auto',
-                    title="Dispersion diagram",
+                    title="FV dispersion diagram",
                     color_continuous_scale='turbo',
                     origin='lower',
                     )
@@ -240,7 +249,7 @@ def plot_FK(FK, fs, ks, norm=None):
                     x=fs,
                     y=ks,
                     aspect='auto',
-                    title="FK diagram",
+                    title="FK dispersion diagram",
                     color_continuous_scale='turbo',
                     origin='lower',
                     )
@@ -503,7 +512,7 @@ def plot_inversion(model):
     fig.update_xaxes(title_text="Density [kg/m^3]", row=1, col=3)
 
     fig.update_layout(
-        title="Inverted Model",
+        title="Inverted model",
         showlegend=False,
     )
     return fig
@@ -558,7 +567,7 @@ def plot_dispersion_curves(fs, vs, dc, fs_inv, vs_inv):
     )
 
     fig.update_layout(
-        title="Dispersion Curves",
+        title="Dispersion curves",
         xaxis_title="Frequency [Hz]",
         yaxis_title="Velocity [m/s]",
         )

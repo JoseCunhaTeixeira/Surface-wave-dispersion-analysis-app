@@ -573,7 +573,7 @@ def plot_dispersion_curves(fs, vs, dc, fs_inv, vs_inv):
         )
     
     rmse = np.sqrt(np.mean((vs - vs_inv)**2))
-    nrmse = rmse / (vs.max() - vs.min())
+    nrmse = rmse / (vs.max() - vs.min()) * 100
 
     return fig, rmse, nrmse
 ### -----------------------------------------------------------------------------------------------

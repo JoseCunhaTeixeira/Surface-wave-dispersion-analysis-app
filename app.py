@@ -430,8 +430,7 @@ if uploaded_file is not None:
                         st.header('Inversion results')
                         fig = plot_inversion(st.session_state.model)
                         st.plotly_chart(fig)
-                        model = st.session_state.model
-                        model[-1,0] = None
+                        st.session_state.model[-1,0] = None
                         df = pd.DataFrame(st.session_state.model*1000, columns=["Thickness [m]", "P-wave velocity [m/s]", "S-wave velocity [m/s]", "Density [kg/m^3]"])
                         st.dataframe(df)
                         

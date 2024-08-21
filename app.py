@@ -191,11 +191,16 @@ if uploaded_file is not None:
                                 "1/3",
                                 "1/4",
                                 "1/5",
-                                "First half",
-                                "Second half",
-                                "First tier",
-                                "Second tier",
-                                "Third tier"],
+                                "First 1/2",
+                                "Second 1/2",
+                                "First 1/3",
+                                "Second 1/3",
+                                "Third 1/3",
+                                "First 1/4",
+                                "Last 1/4",
+                                "First 1/5",
+                                "Last 1/5",
+                                ],
                                 )
     
     
@@ -217,16 +222,24 @@ if uploaded_file is not None:
                 selected_geophones = [i for i in range(0, n_channels, 4)]
             case "1/5":
                 selected_geophones = [i for i in range(0, n_channels, 5)]
-            case "First half":
+            case "First 1/2":
                 selected_geophones = [i for i in range(n_channels // 2)]
-            case "Second half":
+            case "Second 1/2":
                 selected_geophones = [i for i in range(n_channels // 2, n_channels)]
-            case "First tier":
+            case "First 1/3":
                 selected_geophones = [i for i in range(n_channels // 3)]
-            case "Second tier":
+            case "Second 1/3":
                 selected_geophones = [i for i in range(n_channels // 3, 2 * n_channels // 3)]
-            case "Third tier":
+            case "Third 1/3":
                 selected_geophones = [i for i in range(2 * n_channels // 3, n_channels)]
+            case "First 1/4":
+                selected_geophones = [i for i in range(n_channels // 4)]
+            case "Last 1/4":
+                selected_geophones = [i for i in range(3 * n_channels // 4, n_channels)]
+            case "First 1/5":
+                selected_geophones = [i for i in range(n_channels // 5)]
+            case "Last 1/5":
+                selected_geophones = [i for i in range(4 * n_channels // 5, n_channels)]
             case _:
                 selected_geophones = [i for i in range(n_channels)]
         st.session_state.selected_geophones = selected_geophones

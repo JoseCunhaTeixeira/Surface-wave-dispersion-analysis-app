@@ -521,7 +521,7 @@ if uploaded_file is not None:
                         st.success("👌 Inversion completed.")
 
                         st.divider()
-                        st.header(f'Inversion results fro Lode {st.session_state.mode}')
+                        st.header(f'Inversion results for Mode {st.session_state.mode}')
                         
                         st.info(f"📋 {st.session_state.nb_models_in_range} generated models with dispersion curves inside the error-bars.")
                         st.plotly_chart(st.session_state.modes_fig)

@@ -715,6 +715,7 @@ def direct(model, fs, mode):
 
 ### ----------------------------------------------------------------------------------------------- 
 def plot_dispersion_curves(fs, vs, dc, fs_inv, vs_inv):
+       
     fig = go.Figure()
     
     fig.add_trace(go.Scatter
@@ -745,6 +746,10 @@ def plot_dispersion_curves(fs, vs, dc, fs_inv, vs_inv):
         yaxis_title="Velocity [m/s]",
         )
     
+    fs = np.round(fs,3)
+    fs_inv = np.round(fs_inv,3)
+    idx = [index for index, element in enumerate(fs) if element in fs_inv]
+    vs = vs[idx]
     rmse = np.sqrt(np.mean((vs - vs_inv)**2))
     nrmse = rmse / (vs.max() - vs.min()) * 100
 

@@ -567,7 +567,7 @@ if uploaded_file is not None:
                         fig = plot_inversion(model)
                         st.plotly_chart(fig)
                         
-                        fs_inverted, vs_inverted = direct(model, st.session_state.fs_picked)
+                        fs_inverted, vs_inverted = direct(model, st.session_state.fs_picked, st.session_state.mode)
                         
                         fig, rmse, nrmse = plot_dispersion_curves(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, fs_inverted, vs_inverted)
                         st.plotly_chart(fig)

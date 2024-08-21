@@ -1,6 +1,7 @@
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import pandas as pd
 from matplotlib.path import Path
 from scipy.fft import fft, fftfreq, fft2
 from scipy.interpolate import interp1d
@@ -8,6 +9,7 @@ from scipy.signal import savgol_filter
 from evodcinv import EarthModel, Layer, Curve
 from plotly.subplots import make_subplots
 from disba import PhaseDispersion
+from matplotlib.pyplot import cm
 
 
 
@@ -420,12 +422,10 @@ def lorentzian_error(v_picked, f_picked, dx, Nx, a):
 
 
 ### -----------------------------------------------------------------------------------------------
-def invert_evodcinv(fs : np.array, vs: np.array, dcs : np.array, layers : dict, runs : int):
+def invert_evodcinv(fs : np.array, vs: np.array, dcs : np.array, layers : dict, runs : int, iters : int):
     # Initialize model
     model = EarthModel()
-    
-    nb_layers = len(layers)
-    
+      
     for i in range(1, len(layers)+1):
         thickness_min = layers[f'Layer {i}']["thickness_min"] / 1000
         thickness_max = layers[f'Layer {i}']["thickness_max"] / 1000
@@ -439,30 +439,190 @@ def invert_evodcinv(fs : np.array, vs: np.array, dcs : np.array, layers : dict, 
         misfit="rmse",  # Misfit function type
         optimizer_args={
             "popsize": 10,  # Population size
-            "maxiter": 100,  # Number of iterations
+            "maxiter": iters,  # Number of iterations
             "workers": -1,  # Number of cores
             "seed": 0,
         },
     )
 
-    # Define the dispersion curves to invert
-    # period and velocity are assumed to be data arrays
-    fs = 1 / fs[::-1]
-    vs = vs[::-1]/1000
-    curves = [Curve(fs, vs, 0, "rayleigh", "phase")]
+    ts = 1 / fs[::-1]
+    vs_tmp =  vs[::-1]/1000
+    curves = [Curve(ts, vs_tmp, 0, "rayleigh", "phase", uncertainties=dcs/1000)]
 
     # Run inversion
     res = model.invert(curves, runs)
-
-    return res.model, res.misfit
+    
+    models = np.array(res.models)
+    misfits = np.array(res.misfits)
+    
+    sorted_indices = np.argsort(misfits)
+    models = models[sorted_indices]
+    misfits = misfits[sorted_indices]
+    
+    return models, misfits
 ### -----------------------------------------------------------------------------------------------
 
 
 
 
 ### -----------------------------------------------------------------------------------------------
-def invert_gpdc(fs : np.array, vs: np.array, dcs : np.array, layers : dict):
-    ...
+def mean_model(models, misfits, fs, vs, dc):
+    sorted_indices = np.argsort(misfits)
+    models = models[sorted_indices]
+    misfits = misfits[sorted_indices]    
+    
+    cpt = 0
+    curves = []
+    models_tmp = []
+    misfits_tmp = []
+    for i in range(len(misfits)):
+        try :
+            _, curve = direct(models[i], fs)
+            cpt += 1
+        except:
+            continue
+        curves.append(curve)
+        models_tmp.append(models[i])
+        misfits_tmp.append(misfits[i])
+        
+    models = np.array(models_tmp)
+    misfits = np.array(misfits_tmp)
+    curves = np.array(curves)
+                    
+    models_in_range = []
+    misfits_in_range = []
+    curves_in_range = []
+    for i, (model, misfit, curve) in enumerate(zip(models, misfits, curves)):
+        is_within_range = np.all(np.abs(curve - vs) <= dc)
+        if is_within_range:
+            models_in_range.append(model)
+            misfits_in_range.append(misfit)
+            curves_in_range.append(curve)
+    models_in_range = np.array(models_in_range)
+    misfits_in_range = np.array(misfits_in_range)
+    curves_in_range = np.array(curves_in_range)  
+     
+    if models_in_range.size == 0:
+        raise SystemError("No models inside the error-bars")
+    
+    
+    
+    
+          
+    fig = make_subplots(rows=1, cols=2, subplot_titles=("Dispersion curves", "Vs models"))
+
+    colormap = cm.get_cmap('viridis', len(models_in_range))
+    
+    max_depth = np.max(np.cumsum(models_in_range[:, :, 0], axis=1)) * 1000
+    
+    # Plot models as stairs    
+    for i, model in enumerate(models_in_range[::-1]):
+        model = model * 1000
+        model[-1, 0] = max_depth - np.sum(model[:, 0])
+        top_layer = np.copy(model[0, :])
+        top_layer[0] = 0
+        model = np.vstack((top_layer, model))
+        
+        color = colormap(i)
+        color = f'rgb({colormap(i)[0]*255},{colormap(i)[1]*255},{colormap(i)[2]*255})'
+        fig.add_trace(go.Scatter(x=model[:, 2],
+                                 y=np.cumsum(model[:, 0]),
+                                 name=f'msifit={misfits_in_range[::-1][i]:.2f}',
+                                 mode='lines',
+                                 line=dict(color=color, shape='hv')),
+                                row=1, col=2)
+    # Plot dispersion curves
+    colormap = cm.get_cmap('viridis', len(curves_in_range))
+    for i, curve in enumerate(curves_in_range[::-1]):
+        color = colormap(i)
+        color = f'rgb({colormap(i)[0]*255},{colormap(i)[1]*255},{colormap(i)[2]*255})'
+        fig.add_trace(go.Scatter(x=fs,
+                                 y=curve,
+                                 mode='lines',
+                                 name=f'msifit={misfits_in_range[::-1][i]:.2f}',
+                                 line=dict(color=color)),
+                                row=1, col=1)
+
+    # Add measured dispersion curve with error bars
+    fig.add_trace(go.Scatter(x=fs,
+                             y=vs,
+                             mode='markers',
+                             error_y=dict(type='data', array=dc, visible=True, color='grey', width=2, thickness=0.75),
+                             name='Measured',
+                             marker=dict(color='grey')),
+                            row=1, col=1)
+
+    fig.update_layout(showlegend=False)
+    fig.update_xaxes(title_text="Frequency [Hz]", row=1, col=1)
+    fig.update_yaxes(title_text="Velocity [m/s]", row=1, col=1)
+    fig.update_yaxes(title_text="Depth [m]", row=1, col=2, autorange="reversed")
+    fig.update_xaxes(title_text="Shear-velocity [m/s]", row=1, col=2)
+    
+       
+       
+       
+    
+        
+    # dx = 0.01/1000
+    # models_in_range[:,-1, 0] = dx
+    
+    # max_len = int(np.max(np.sum(models_in_range[:, :, 0], axis=1))/dx)
+    
+    # # misfits_d = np.full((len(models_in_range), max_len), np.nan)
+
+    # for model_i, model in enumerate(models_in_range):
+        
+    #     model_d = np.full((max_len, 4), np.nan)
+    #     start = 0
+        
+    #     # misfits_d[model_i, :] = misfits_in_range[model_i]
+        
+    #     for layer_i, layer in enumerate(model):
+    #         thick = layer[0]
+    #         vp = layer[1]
+    #         vs = layer[2]
+    #         rho = layer[3]
+            
+    #         N = int(thick / dx)
+    #         end = start + N
+            
+    #         model_d[start:end, :] = [dx, vp, vs, rho]
+            
+    #         start = end
+                
+    #     if model_i == 0:
+    #         models_d = [model_d]
+    #     else:
+    #         models_d.append(model_d)
+
+    # models_d = np.array(models_d)
+    
+
+    # # weights = 1/misfits_in_range
+    # # weights = weights / np.sum(weights, axis=0)
+    
+    # mean_model = np.nanmedian(models_d, axis=0)
+    # mean_misfit = np.nanmedian(misfits_in_range)
+    # nb_models_in_range = len(models_in_range)
+    
+    # isnotnan = ~np.isnan(mean_model).any(axis=1)
+    # mean_model = mean_model[isnotnan]
+
+
+
+
+
+    # weights = 1/misfits_in_range
+    # weights = weights / np.sum(weights, axis=0)
+    
+    mean_model = np.nanmedian(models_in_range, axis=0)
+    mean_misfit = np.nanmean(misfits_in_range)
+    nb_models_in_range = len(models_in_range)
+    
+    
+    
+        
+    return mean_model, mean_misfit, nb_models_in_range, fig
 ### -----------------------------------------------------------------------------------------------
 
 
@@ -512,7 +672,6 @@ def plot_inversion(model):
     fig.update_xaxes(title_text="Density [kg/m^3]", row=1, col=3)
 
     fig.update_layout(
-        title="Inverted model",
         showlegend=False,
     )
     return fig
@@ -526,12 +685,15 @@ def direct(model, fs):
     if fs[0] == 0:
         fs = fs[1:]
     t = 1 / fs[::-1]
-
+    
     pd = PhaseDispersion(*model.T)
     cpr = [pd(t, mode=0, wave="rayleigh")]
     
     fs = 1/cpr[0][0]
     vs = cpr[0][1]*1000
+    
+    fs = fs[::-1]
+    vs = vs[::-1]
     
     return fs, vs
 ### -----------------------------------------------------------------------------------------------
@@ -567,7 +729,6 @@ def plot_dispersion_curves(fs, vs, dc, fs_inv, vs_inv):
     )
 
     fig.update_layout(
-        title="Dispersion curves",
         xaxis_title="Frequency [Hz]",
         yaxis_title="Velocity [m/s]",
         )

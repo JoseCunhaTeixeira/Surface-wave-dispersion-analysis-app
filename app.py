@@ -1,4 +1,7 @@
 """
+Compile C++ functions:
+python3.10 setup.py build_ext --inplace clean
+
 Launch the app with the following command:
 streamlit run app.py
 or
@@ -10,9 +13,11 @@ import pandas as pd
 import streamlit as st
 from obspy import read
 
-from functions import phase_shift
-from functions import FK
-from functions import stream_to_array, plot_wiggle, plot_spectrum, plot_disp, plot_geophones, extract_curve, lorentzian_error, invert_evodcinv, plot_inversion, direct, plot_dispersion_curves
+from functions import FK, phase_shift
+from functions import stream_to_array
+from functions import plot_geophones, plot_wiggle, plot_spectrum, plot_disp, plot_dispersion_curves, plot_inversion
+from functions import extract_curve, lorentzian_error
+from functions import invert_evodcinv, mean_model, direct
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -47,6 +52,9 @@ if 'selected_geophones' not in st.session_state:
 if 'clicked_invert' not in st.session_state:
     st.session_state.clicked_invert = False
     
+if 'func' not in st.session_state:
+    st.session_state.func = None
+    
 def handle_picked():
     if st.session_state.event:
         selected_data = st.session_state.event.selection['lasso']
@@ -55,7 +63,7 @@ def handle_picked():
             y = selected_data[0]['y']
             poly_coords = np.array([x, y]).T
             f_picked, v_picked = extract_curve(st.session_state.FV, st.session_state.fs, st.session_state.vs, poly_coords, smooth=True)
-            dc = lorentzian_error(v_picked, f_picked, st.session_state.dx, st.session_state.Nx, a=0.3)
+            dc = lorentzian_error(v_picked, f_picked, st.session_state.dx, st.session_state.Nx, a=0.5)
             st.session_state.fs_picked = f_picked
             st.session_state.vs_picked = v_picked
             st.session_state.dc_picked = dc
@@ -65,9 +73,27 @@ def handle_picked():
         st.session_state.layers_nb = 0
 
 
-def clicked_add_layer(thickness_min, thickness_max, vs_min, vs_max):
+def clicked_add_layer(thickness_min, thickness_max, vs_min, vs_max, vp_min=None, vp_max=None, rho_min=None, rho_max=None, func=None):    
+    if func == 'Evodcinv':
+        if st.session_state.layers_nb != 0 and "vp_min" in st.session_state.layers['Layer 1'].keys():
+            st.session_state.layers = {}
+            st.session_state.layers_nb = 0
+            
+    elif func == 'Dinver':
+        if st.session_state.layers_nb != 0 and "vp_min" not in st.session_state.layers['Layer 1'].keys():
+            st.session_state.layers = {}
+            st.session_state.layers_nb = 0
+    
+    if st.session_state.func != func:
+        st.session_state.func = func
+    
+            
     st.session_state.layers_nb += 1
-    st.session_state.layers[f'Layer {st.session_state.layers_nb}'] = {"thickness_min":thickness_min, "thickness_max":thickness_max, "vs_min":vs_min, "vs_max":vs_max}
+    if func == 'Evodcinv':
+        st.session_state.layers[f'Layer {st.session_state.layers_nb}'] = {"thickness_min":thickness_min, "thickness_max":thickness_max, "vs_min":vs_min, "vs_max":vs_max}
+    elif func == 'Dinver':
+        st.session_state.layers[f'Layer {st.session_state.layers_nb}'] = {"thickness_min":thickness_min, "thickness_max":thickness_max, "vs_min":vs_min, "vs_max":vs_max, "vp_min":vp_min, "vp_max":vp_max, "rho_min":rho_min, "rho_max":rho_max}
+        
     if 'clicked_invert' in st.session_state:
         st.session_state.clicked_invert = False
 
@@ -291,7 +317,7 @@ if uploaded_file is not None:
         if st.session_state.clicked_compute:
             st.header("Dispersion diagram")
                 
-            if function == "Phase-Shift":
+            if function in ["Phase-Shift"]:
                 if 'FV' not in st.session_state:
                     (fs, vs, FV) = phase_shift(XT, dt, offsets, f_min, f_max, v_min, v_max, dv)
                     st.session_state.fs = fs
@@ -304,7 +330,7 @@ if uploaded_file is not None:
                     vs = st.session_state.vs
                 
                 
-            elif function == "FK":
+            elif function in ["FK"]:
                 if 'FV' not in st.session_state:
                     (fs, vs, FV) = FK(XT, dt, offsets, f_min, f_max, k_min, k_max)
                     st.session_state.fs = fs
@@ -333,7 +359,7 @@ if uploaded_file is not None:
                 st.plotly_chart(fig)
             
             
-            elif st.session_state.clicked_pick and function == "Phase-Shift":
+            elif st.session_state.clicked_pick and function in ["Phase-Shift (C++)", "Phase-Shift (Python)"]:
                 
                 fs_tmp = np.copy(st.session_state.fs)
                 vs_tmp = np.copy(st.session_state.vs)
@@ -383,68 +409,157 @@ if uploaded_file is not None:
                 st.header("Inversion parameters")
                 
                 inv_method = st.selectbox("Inversion method",
-                                ["evodcinv"],
+                                ["Evodcinv"],#, "Dinver"],
                                 )
                 
-                if inv_method == "evodcinv":
+                if inv_method == "Evodcinv":
                     thickness_min = st.number_input("Min thickness [m]", value=0.5, min_value=0.1, step=0.5)
                     thickness_max = st.number_input("Max thickness [m]", value=5.0, min_value=thickness_min, step=0.5)
-                    vs_min = st.number_input("Min S-wave velocity [m/s]", value=10, min_value=1, step=10)
-                    vs_max = st.number_input("Max S-wave velocity [m/s]", value=2000, min_value=vs_min, step=10)
-                    runs = st.number_input("Number of runs", value=1, min_value=1)
+                    vs_min = st.number_input("Min S-wave velocity [m/s]", value=100, min_value=1, step=10)
+                    vs_max = st.number_input("Max S-wave velocity [m/s]", value=1000, min_value=vs_min, step=10)
                     
                     col1, col2 = st.columns([1,1])
                     
                     with col1:
                         button_add = st.button("Add layer")
                         if button_add:
-                            clicked_add_layer(thickness_min, thickness_max, vs_min, vs_max)
+                            clicked_add_layer(thickness_min, thickness_max, vs_min, vs_max, func="Evodcinv")
                     with col2:
                         button_remove = st.button("Remove layer")
                         if button_remove:
                             clicked_remove_layer()
                         
+                                               
+                elif inv_method == "Dinver":
+                    thickness_min = st.number_input("Min thickness [m]", value=0.5, min_value=0.1, step=0.5)
+                    thickness_max = st.number_input("Max thickness [m]", value=5.0, min_value=thickness_min, step=0.5)
+                    vs_min = st.number_input("Min S-wave velocity [m/s]", value=100, min_value=1, step=10)
+                    vs_max = st.number_input("Max S-wave velocity [m/s]", value=1000, min_value=vs_min, step=10)
+                    vp_min = st.number_input("Min P-wave velocity [m/s]", value=200, min_value=1, step=10)
+                    vp_max = st.number_input("Max P-wave velocity [m/s]", value=2000, min_value=vp_min, step=10)
+                    rho_min = st.number_input("Min density [kg/m^3]", value=1000, min_value=1, step=100)
+                    rho_max = st.number_input("Max density [kg/m^3]", value=2000, min_value=rho_min, step=100)
+                   
+                    col1, col2 = st.columns([1,1])
+                    
+                    with col1:
+                        button_add = st.button("Add layer")
+                        if button_add:
+                            clicked_add_layer(thickness_min, thickness_max, vs_min, vs_max, vp_min, vp_max, rho_min, rho_max, func='Dinver')
+                    with col2:
+                        button_remove = st.button("Remove layer")
+                        if button_remove:
+                            clicked_remove_layer()
+                   
+                   
+                                           
+                st.text('')
+                st.text('')
+                
+                if st.session_state.layers_nb < 2:
                     if st.session_state.layers:
-                        # st.write(st.session_state.layers)
+                        st.markdown(f"Model parameters for inversion with **{st.session_state.func}**")
                         df = pd.DataFrame(st.session_state.layers).T
                         st.dataframe(df)
+                    st.text('')
+                    st.text('')
+                    st.warning("⚠️ Define at least two layers to be able to perform an inversion.")
+                    st.divider()
+                
+                 
+                if st.session_state.layers_nb >= 2:
+                    if st.session_state.layers:
+                        st.markdown(f"Model parameters for inversion with **{st.session_state.func}**")
+                        df = pd.DataFrame(st.session_state.layers).T
+                        st.dataframe(df)
+                    st.text('')
+                    st.text('')
+                    st.success("👇 You can perform an inversion.")
+                    st.divider()
                         
-                        
-                if st.session_state.layers_nb > 1:
+                    st.header("Inversion computation")
                     
+                    runs = st.number_input("Number of runs", value=1, min_value=1)
+                    iters = st.number_input("Number of iterations", value=100, min_value=100, step=100)
                     button_invert = st.button("Invert", key="click_invert", on_click=handle_invert, type="primary")
                     
                     if not st.session_state.clicked_invert:
-                        st.info("👆 Click on the 'Invert' button to start the inversion.")
-                    elif st.session_state.clicked_invert:
-                        st.info("⬆️ You can change the parameters and recompute the inversion.")
-                        st.success("👌 Inversion completed.")
+                        st.info("👆 Click on the 'Invert' button to launch the inversion.")
                     
                     if st.session_state.click_invert:
-                        model, misfit = invert_evodcinv(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, st.session_state.layers, runs)
-                        st.session_state.model = model
-                        st.session_state.misfit = misfit
+                        if st.session_state.func == 'Evodcinv':
+                            models, misfits = invert_evodcinv(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, st.session_state.layers, runs, iters)
+                        elif st.session_state.func == 'Dinver':
+                            pass
+                            
+                        avg_model, misfit, nb_models_in_range, fig = mean_model(models, misfits, st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked)
                         
+                        st.session_state.misfit = misfit
+                        st.session_state.best_model = models[0]
+                        st.session_state.avg_model = avg_model
+                        st.session_state.modes_fig = fig
+                        st.session_state.nb_models_in_range = nb_models_in_range
+                                               
                     if st.session_state.clicked_invert:
+                        st.info("⬆️ You can change the inversion parameters and recompute an inversion.")
+                        st.success("👌 Inversion completed.")
+
                         st.divider()
                         st.header('Inversion results')
-                        fig = plot_inversion(st.session_state.model)
-                        st.plotly_chart(fig)
-                        st.session_state.model[-1,0] = None
-                        df = pd.DataFrame(st.session_state.model*1000, columns=["Thickness [m]", "P-wave velocity [m/s]", "S-wave velocity [m/s]", "Density [kg/m^3]"])
+                        
+                        st.info(f"📋 {st.session_state.nb_models_in_range} generated models with dispersion curves inside the error-bars.")
+                        st.plotly_chart(st.session_state.modes_fig)
+                        
+                        
+                        st.text('')
+                        st.text('')
+                        st.text('')
+                        st.text('')
+                        
+                        
+                        st.subheader("Best model")
+                        model = np.copy(st.session_state.best_model)
+                        model[-1,0] = None
+                        
+                        df = pd.DataFrame(model*1000, columns=["Thickness [m]", "P-wave velocity [m/s]", "S-wave velocity [m/s]", "Density [kg/m^3]"])
                         st.dataframe(df)
                         
-                        fs_inverted, vs_inverted = direct(st.session_state.model, st.session_state.fs_picked)
+                        fig = plot_inversion(model)
+                        st.plotly_chart(fig)
+                        
+                        fs_inverted, vs_inverted = direct(model, st.session_state.fs_picked)
                         
                         fig, rmse, nrmse = plot_dispersion_curves(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, fs_inverted, vs_inverted)
                         st.plotly_chart(fig)
                         
                         st.info(f"📋 RMSE = {rmse:.2f} m/s | NRMSE = {nrmse:.2f} %")
                         
-                else:
-                    st.warning("⚠️ Define at least two layers to perform the inversion.")
                         
-                st.divider()
+                        st.text('')
+                        st.text('')
+                        st.text('')
+                        st.text('')
+                        
+                        
+                        st.subheader("**Median model**")
+                        model = np.copy(st.session_state.avg_model)
+                        model[-1,0] = None
+                        
+                        df = pd.DataFrame(model*1000, columns=["Thickness [m]", "P-wave velocity [m/s]", "S-wave velocity [m/s]", "Density [kg/m^3]"])
+                        st.dataframe(df)
+                        
+                        fig = plot_inversion(model)
+                        st.plotly_chart(fig)
+                        
+                        fs_inverted, vs_inverted = direct(model, st.session_state.fs_picked)
+                        
+                        fig, rmse, nrmse = plot_dispersion_curves(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, fs_inverted, vs_inverted)
+                        st.plotly_chart(fig)
+                        
+                        st.info(f"📋 RMSE = {rmse:.2f} m/s | NRMSE = {nrmse:.2f} %")
+                        
+                    st.divider()
+                                                
                 
 elif uploaded_file is None:
     st.info("👆 Please upload a seismic record data file.")
@@ -481,6 +596,8 @@ elif uploaded_file is None:
         del st.session_state['model']
     if 'misfit' in st.session_state:
         del st.session_state['misfit']
+    if 'nb_models_in_range' in st.session_state:
+        del st.session_state['nb_models_in_range']
     if 'clicked_invert' in st.session_state:
         del st.session_state['clicked_invert']
     if 'click_invert' in st.session_state:

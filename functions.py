@@ -217,11 +217,15 @@ def plot_disp(arr, xs, ys, type, norm=None):
 
 ### -----------------------------------------------------------------------------------------------
 def plot_FV(FV, fs, vs, norm=None):
-    if norm == "Frequency":
+    FV = np.copy(FV)
+    if norm == "Axis 0":
         for i, f in enumerate(fs):
             FV[i, :] = FV[i, :] / np.nanmax(FV[i, :])
-    elif norm == "Global":
-        FV = FV / np.nanmax(FV)
+    elif norm == "Axis 1":
+        for i, v in enumerate(vs):
+            FV[:, i] = FV[:, i] / np.nanmax(FV[:, i])
+    elif norm == 'Global':
+        FV /= np.nanmax(FV) 
     
     fig = px.imshow(FV.T,
                     labels=dict(x="Frequency [Hz]", y="Phase velocity [m/s]", color="Amplitude"),
@@ -240,12 +244,16 @@ def plot_FV(FV, fs, vs, norm=None):
 
 ### -----------------------------------------------------------------------------------------------
 def plot_FK(FK, fs, ks, norm=None):
-    if norm == "Wavenumber":
-        for i, k in enumerate(ks):
+    FK = np.copy(FK)
+    if norm == "Axis 0":
+        for i, f in enumerate(fs):
+            FK[i, :] = FK[i, :] / np.nanmax(FK[i, :])
+    elif norm == "Axis 1":
+        for i, v in enumerate(ks):
             FK[:, i] = FK[:, i] / np.nanmax(FK[:, i])
-    elif norm == "Global":
-        FK = FK / np.nanmax(FK)
-    
+    elif norm == 'Global':
+        FK /= np.nanmax(FK)
+            
     fig = px.imshow(FK.T,
                     labels=dict(x="Frequency [Hz]", y="Wavenumber [m^-1]", color="Amplitude"),
                     x=fs,
@@ -422,7 +430,7 @@ def lorentzian_error(v_picked, f_picked, dx, Nx, a):
 
 
 ### -----------------------------------------------------------------------------------------------
-def invert_evodcinv(fs : np.array, vs: np.array, dcs : np.array, layers : dict, runs : int, iters : int):
+def invert_evodcinv(fs : np.array, vs: np.array, dcs : np.array, layers : dict, runs : int, iters : int, mode : int):
     # Initialize model
     model = EarthModel()
       
@@ -447,7 +455,7 @@ def invert_evodcinv(fs : np.array, vs: np.array, dcs : np.array, layers : dict, 
 
     ts = 1 / fs[::-1]
     vs_tmp =  vs[::-1]/1000
-    curves = [Curve(ts, vs_tmp, 0, "rayleigh", "phase", uncertainties=dcs/1000)]
+    curves = [Curve(ts, vs_tmp, mode, "rayleigh", "phase", uncertainties=dcs/1000)]
 
     # Run inversion
     res = model.invert(curves, runs)

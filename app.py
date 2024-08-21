@@ -295,21 +295,13 @@ if uploaded_file is not None:
             v_min = st.number_input("Min velocity [m/s]", value=0, min_value=0, step=10)
             v_max = st.number_input("Max velocity [m/s]", value=1000, min_value=v_min, step=10)
             dv = st.number_input("Velocity step [m/s]", value=1.0, min_value=0.1, step=0.1)
-            norm = st.selectbox("Normalization method", ["None", "Global", "Frequency"])
-            function = function
-            f_min = f_min
-            f_max = f_max
-            v_min = v_min
-            v_max = v_max
-            dv = dv
-            norm = norm
+            
             
         elif function in ["FK"]:
             f_min = st.number_input("Min frequency [Hz]", 0)
             f_max = st.number_input("Max frequency [Hz]", value=200)
             k_min = st.number_input("Min wavenumber [m^-1]", value=0)
             k_max = st.number_input("Max wavenumber [m^-1]", value=5)
-            norm = st.selectbox("Normalization method", [None, "Global", "Wavenumber"])
         
         button = st.button("Compute", on_click=handle_compute, type="primary")
         if st.session_state.clicked_compute:
@@ -357,7 +349,8 @@ if uploaded_file is not None:
                 
 
             if not st.session_state.clicked_pick:
-                fig = plot_disp(st.session_state.FV, st.session_state.fs, st.session_state.vs, type=st.session_state.type, norm=norm)
+                st.session_state.norm = st.selectbox("Normalization method", ["None", "Global", "Axis 0", "Axis 1"])
+                fig = plot_disp(st.session_state.FV, st.session_state.fs, st.session_state.vs, type=st.session_state.type, norm=st.session_state.norm)
                 
                 if st.session_state.picked:
                     fig.add_trace(go.Line(x=st.session_state.fs_picked,
@@ -372,17 +365,25 @@ if uploaded_file is not None:
                 st.plotly_chart(fig)
             
             
-            elif st.session_state.clicked_pick and function in ["Phase-Shift"]:
+            elif st.session_state.clicked_pick and function in ["Phase-Shift (C++)", "Phase-Shift (Python)"]:
                 
                 fs_tmp = np.copy(st.session_state.fs)
                 vs_tmp = np.copy(st.session_state.vs)
                 FV_tmp = np.copy(st.session_state.FV)
-                if len(st.session_state.fs) > 1000:
-                    fs_tmp = st.session_state.fs[::10]
-                    FV_tmp = st.session_state.FV[::10]
-                if len(st.session_state.vs) > 1000:
-                    vs_tmp = st.session_state.vs[::10]
-                    FV_tmp = st.session_state.FV[:,::10]
+                
+                if st.session_state.norm == "Axis 0":
+                    for i, f in enumerate(fs_tmp):
+                        FV_tmp[i, :] = FV_tmp[i, :] / np.nanmax(FV_tmp[i, :])
+                elif st.session_state.norm == "Axis 1":
+                    for i, v in enumerate(vs_tmp):
+                        FV_tmp[:, i] = FV_tmp[:, i] / np.nanmax(FV_tmp[:, i])
+                        
+                if len(fs_tmp) > 1000:
+                    fs_tmp = fs_tmp[::10]
+                    FV_tmp = FV_tmp[::10]
+                if len(vs_tmp) > 1000:
+                    vs_tmp = vs_tmp[::10]
+                    FV_tmp = FV_tmp[:,::10]
                 f_grid, v_grid = np.meshgrid(fs_tmp, vs_tmp)
                 f_grid = f_grid.flatten()
                 v_grid = v_grid.flatten()
@@ -411,6 +412,7 @@ if uploaded_file is not None:
                 
                 
             st.divider()
+            
             
             
             
@@ -492,6 +494,7 @@ if uploaded_file is not None:
                         
                     st.header("Inversion computation")
                     
+                    mode = st.number_input("Mode to invert", value=0, min_value=0, step=1)
                     runs = st.number_input("Number of runs", value=1, min_value=1)
                     iters = st.number_input("Number of iterations", value=100, min_value=100, step=100)
                     button_invert = st.button("Invert", key="click_invert", on_click=handle_invert, type="primary")
@@ -501,7 +504,7 @@ if uploaded_file is not None:
                     
                     if st.session_state.click_invert:
                         if st.session_state.func == 'Evodcinv':
-                            models, misfits = invert_evodcinv(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, st.session_state.layers, runs, iters)
+                            models, misfits = invert_evodcinv(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, st.session_state.layers, runs, iters, mode)
                         elif st.session_state.func == 'Dinver':
                             pass
                             

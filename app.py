@@ -359,7 +359,7 @@ if uploaded_file is not None:
                 st.plotly_chart(fig)
             
             
-            elif st.session_state.clicked_pick and function in ["Phase-Shift (C++)", "Phase-Shift (Python)"]:
+            elif st.session_state.clicked_pick and function in ["Phase-Shift"]:
                 
                 fs_tmp = np.copy(st.session_state.fs)
                 vs_tmp = np.copy(st.session_state.vs)

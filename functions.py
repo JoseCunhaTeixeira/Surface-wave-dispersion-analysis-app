@@ -310,7 +310,7 @@ def plot_geophones(selected_geophone_positions, geophone_positions, source_posit
         xaxis_title="Position [m]",
         yaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
         yaxis_range=[-1, 1],  # Optional: Control the vertical space
-        xaxis_range=[min(geophone_positions)-1, max(geophone_positions)+1],  # Optional: Add some padding around x points
+        xaxis_range=[min(source_position, min(geophone_positions))-1, max(source_position, max(geophone_positions))+1],  # Optional: Add some padding around x points
         height=200,
     )
 
@@ -474,42 +474,46 @@ def invert_evodcinv(fs : np.array, vs: np.array, dcs : np.array, layers : dict, 
 
 
 ### -----------------------------------------------------------------------------------------------
-def mean_model(models, misfits, fs, vs, dc):
+def mean_model(models, misfits, fs, vs, dc, mode):
     sorted_indices = np.argsort(misfits)
     models = models[sorted_indices]
     misfits = misfits[sorted_indices]    
     
     cpt = 0
     curves = []
+    frequencies = []
     models_tmp = []
     misfits_tmp = []
     for i in range(len(misfits)):
         try :
-            _, curve = direct(models[i], fs)
+            f , curve = direct(models[i], fs, mode)
             cpt += 1
         except:
             continue
         curves.append(curve)
+        frequencies.append(f)
         models_tmp.append(models[i])
         misfits_tmp.append(misfits[i])
-        
-    models = np.array(models_tmp)
-    misfits = np.array(misfits_tmp)
-    curves = np.array(curves)
-                    
+                            
     models_in_range = []
+    frequencies_in_range = []
     misfits_in_range = []
     curves_in_range = []
-    for i, (model, misfit, curve) in enumerate(zip(models, misfits, curves)):
-        is_within_range = np.all(np.abs(curve - vs) <= dc)
+    for i, (model, f, misfit, curve) in enumerate(zip(models, frequencies, misfits, curves)):
+        fs = np.round(fs,3)
+        f = np.round(f,3)
+        idx = [index for index, element in enumerate(fs) if element in f]
+
+        is_within_range = np.all(np.abs(curve - vs[idx]) <= dc[idx])
         if is_within_range:
             models_in_range.append(model)
+            frequencies_in_range.append(f)
             misfits_in_range.append(misfit)
             curves_in_range.append(curve)
+            
     models_in_range = np.array(models_in_range)
     misfits_in_range = np.array(misfits_in_range)
-    curves_in_range = np.array(curves_in_range)  
-     
+    
     if models_in_range.size == 0:
         raise SystemError("No models inside the error-bars")
     
@@ -544,7 +548,7 @@ def mean_model(models, misfits, fs, vs, dc):
     for i, curve in enumerate(curves_in_range[::-1]):
         color = colormap(i)
         color = f'rgb({colormap(i)[0]*255},{colormap(i)[1]*255},{colormap(i)[2]*255})'
-        fig.add_trace(go.Scatter(x=fs,
+        fig.add_trace(go.Scatter(x=frequencies_in_range[::-1][i],
                                  y=curve,
                                  mode='lines',
                                  name=f'msifit={misfits_in_range[::-1][i]:.2f}',
@@ -689,13 +693,13 @@ def plot_inversion(model):
 
 
 ### -----------------------------------------------------------------------------------------------
-def direct(model, fs):
+def direct(model, fs, mode):
     if fs[0] == 0:
         fs = fs[1:]
     t = 1 / fs[::-1]
     
     pd = PhaseDispersion(*model.T)
-    cpr = [pd(t, mode=0, wave="rayleigh")]
+    cpr = [pd(t, mode=mode, wave="rayleigh")]
     
     fs = 1/cpr[0][0]
     vs = cpr[0][1]*1000

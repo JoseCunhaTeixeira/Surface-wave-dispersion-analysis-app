@@ -503,13 +503,13 @@ if uploaded_file is not None:
                         st.info("👆 Click on the 'Invert' button to launch the inversion.")
                     
                     if st.session_state.click_invert:
+                        st.session_state.mode = mode
                         if st.session_state.func == 'Evodcinv':
-                            models, misfits = invert_evodcinv(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, st.session_state.layers, runs, iters, mode)
+                            models, misfits = invert_evodcinv(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, st.session_state.layers, runs, iters, st.session_state.mode)
                         elif st.session_state.func == 'Dinver':
                             pass
                             
-                        avg_model, misfit, nb_models_in_range, fig = mean_model(models, misfits, st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked)
-                        
+                        avg_model, misfit, nb_models_in_range, fig = mean_model(models, misfits, st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, st.session_state.mode)
                         st.session_state.misfit = misfit
                         st.session_state.best_model = models[0]
                         st.session_state.avg_model = avg_model
@@ -543,7 +543,7 @@ if uploaded_file is not None:
                         fig = plot_inversion(model)
                         st.plotly_chart(fig)
                         
-                        fs_inverted, vs_inverted = direct(model, st.session_state.fs_picked)
+                        fs_inverted, vs_inverted = direct(model, st.session_state.fs_picked, st.session_state.mode)
                         
                         fig, rmse, nrmse = plot_dispersion_curves(st.session_state.fs_picked, st.session_state.vs_picked, st.session_state.dc_picked, fs_inverted, vs_inverted)
                         st.plotly_chart(fig)

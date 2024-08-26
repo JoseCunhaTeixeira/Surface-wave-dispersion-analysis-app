@@ -156,11 +156,25 @@ st.write("https://github.com/LilDiabetX")
 st.write("https://github.com/keurfonluu")
 st.divider()
 
-st.header("Data file")
-uploaded_file = st.file_uploader("# Import data file", type=["DAT", "SU"], accept_multiple_files=False)
+st.header("Load file")
+
+choice = st.radio(
+    "Select file source",
+    ["Upload a file", "Use a predefined file to test the app"],
+)
+
+uploaded_file = None
+if choice == "Upload a file":
+    uploaded_file = st.file_uploader("Upload your file", type=["DAT", "SU"], accept_multiple_files=False)
+elif choice == "Use a predefined file to test the app":
+    uploaded_file = "./data_examples/2001.dat"
 
 
 if uploaded_file is not None:
+    st.success("👌 File uploaded successfully.")
+    st.divider()
+    st.header("Load signals")
+    
     stream = read(uploaded_file)
     
     dt = stream[0].stats.delta    
@@ -257,7 +271,7 @@ if uploaded_file is not None:
         
     if st.session_state.clicked_load:
         
-        st.header("Shot-gather")
+        st.header("Shot-gather display")
                     
         selected_geophone_positions = geophone_positions[selected_geophones]
         offsets = np.abs(selected_geophone_positions - source_position)
@@ -320,7 +334,7 @@ if uploaded_file is not None:
 
 
         if st.session_state.clicked_compute:
-            st.header("Dispersion diagram")
+            st.header("Dispersion display and picking")
                 
             if function in ["Phase-Shift"]:
                 if 'FV' not in st.session_state:

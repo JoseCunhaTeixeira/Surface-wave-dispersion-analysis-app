@@ -180,11 +180,12 @@ if uploaded_file is not None:
     dt = stream[0].stats.delta    
     n_channels = int(len(stream))
     n_samples = int(stream[0].stats.npts)
-    source_position = float(stream[0].stats.seg2['SOURCE_LOCATION'])
-    delay = float(stream[0].stats.seg2['DELAY'])
+    format = stream[0].stats._format.lower()
+    source_position = float(stream[0].stats[format]['SOURCE_LOCATION'])
+    delay = float(stream[0].stats[format]['DELAY'])
     geophone_positions = np.zeros(n_channels)
     for i in range(0, n_channels):
-        geophone_positions[i] = float(stream[i].stats.seg2['RECEIVER_LOCATION']) 
+        geophone_positions[i] = float(stream[i].stats[format]['RECEIVER_LOCATION'])
     XT = stream_to_array(stream, n_channels, n_samples)
     
     st.caption("Header information")
